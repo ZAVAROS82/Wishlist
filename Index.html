@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Min Fotballprofil</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<header>
+  <h1>Min Fotballprofil</h1>
+  <p>Utviklingsverktøy for spillere 14–17 år</p>
+</header>
+
+<main>
+
+<section>
+  <h2>🎯 Drømmeposisjon</h2>
+  <select id="dreamPosition">
+    <option value="">Velg posisjon</option>
+    <option>Kantspiller</option>
+    <option>Sentral midtbane</option>
+    <option>Defensiv midtbane</option>
+    <option>Back</option>
+    <option>Midtstopper</option>
+    <option>Spiss</option>
+  </select>
+</section>
+
+<form id="assessmentForm">
+
+<section>
+  <h2>Teknikk</h2>
+  <label>Mottak <input type="range" min="1" max="5" value="3" name="teknikk_mottak"></label>
+  <label>Førstetouch <input type="range" min="1" max="5" value="3" name="teknikk_forstetouch"></label>
+  <label>Pasning <input type="range" min="1" max="5" value="3" name="teknikk_pasning"></label>
+  <label>Ballkontroll <input type="range" min="1" max="5" value="3" name="teknikk_ballkontroll"></label>
+  <label>Dribling <input type="range" min="1" max="5" value="3" name="teknikk_dribling"></label>
+  <label>Avslutning <input type="range" min="1" max="5" value="3" name="teknikk_avslutning"></label>
+</section>
+
+<section>
+  <h2>Fysikk</h2>
+  <label>Hurtighet <input type="range" min="1" max="5" value="3" name="fysikk_hurtighet"></label>
+  <label>Utholdenhet <input type="range" min="1" max="5" value="3" name="fysikk_utholdenhet"></label>
+  <label>Styrke <input type="range" min="1" max="5" value="3" name="fysikk_styrke"></label>
+  <label>Smidighet <input type="range" min="1" max="5" value="3" name="fysikk_smidighet"></label>
+</section>
+
+<section>
+  <h2>Spilleforståelse</h2>
+  <label>Posisjonering <input type="range" min="1" max="5" value="3" name="forstaelse_posisjonering"></label>
+  <label>Spillbarhet <input type="range" min="1" max="5" value="3" name="forstaelse_spillbarhet"></label>
+  <label>Valg med ball <input type="range" min="1" max="5" value="3" name="forstaelse_valg"></label>
+  <label>Bevegelse uten ball <input type="range" min="1" max="5" value="3" name="forstaelse_bevegelse"></label>
+  <label>Overblikk <input type="range" min="1" max="5" value="3" name="forstaelse_overblikk"></label>
+</section>
+
+<section>
+  <h2>Mentalitet</h2>
+  <label>Innsats <input type="range" min="1" max="5" value="3" name="mentalitet_innsats"></label>
+  <label>Konsentrasjon <input type="range" min="1" max="5" value="3" name="mentalitet_konsentrasjon"></label>
+  <label>Mot <input type="range" min="1" max="5" value="3" name="mentalitet_mot"></label>
+  <label>Samspill <input type="range" min="1" max="5" value="3" name="mentalitet_samspill"></label>
+  <label>Håndtere feil <input type="range" min="1" max="5" value="3" name="mentalitet_feil"></label>
+</section>
+
+<section>
+  <h2>Defensivt</h2>
+  <label>Press <input type="range" min="1" max="5" value="3" name="defensiv_press"></label>
+  <label>Markering <input type="range" min="1" max="5" value="3" name="defensiv_markering"></label>
+  <label>Takling <input type="range" min="1" max="5" value="3" name="defensiv_takling"></label>
+  <label>Returløp <input type="range" min="1" max="5" value="3" name="defensiv_returlop"></label>
+  <label>Dueller <input type="range" min="1" max="5" value="3" name="defensiv_duell"></label>
+</section>
+
+<button type="submit">Lagre og se resultat</button>
+</form>
+
+<section id="result" class="hidden">
+  <h2>Ditt resultat</h2>
+  <canvas id="radarChart"></canvas>
+
+  <h3>📈 Utvikling over tid</h3>
+  <canvas id="progressChart"></canvas>
+
+  <h3>🎯 Hva bør du trene på</h3>
+  <ul id="gapAnalysis"></ul>
+
+  <h3>🗓 4-ukers treningsplan</h3>
+  <div id="trainingPlan"></div>
+</section>
+
+<script src="app.js"></script>
+</body>
+</html>
