@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ønskeliste</title>
+<link rel="manifest" href="manifest.json">
+<style>
+body {
+  margin:0;
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg,#6a5cff,#8e7bff);
+  min-height:100vh;
+  padding:20px;
+  color:#333;
+}
+#app {
+  max-width:500px;
+  margin:auto;
+  background:#fff;
+  padding:20px;
+  border-radius:24px;
+  box-shadow:0 8px 20px rgba(0,0,0,0.2);
+}
+h1 {
+  color:white;
+  text-align:center;
+  margin-bottom:20px;
+  font-weight:700;
+  text-shadow:1px 1px 4px rgba(0,0,0,0.3);
+}
+h3 {
+  margin-top:16px;
+  color:#333;
+  font-size:18px;
+}
+button {
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:none;
+  background:#6a5cff;
+  color:white;
+  font-size:16px;
+  margin-bottom:12px;
+  cursor:pointer;
+  transition:0.2s;
+}
+button:hover { background:#5743c6; }
+button.secondary { background:#555; }
+button.secondary:hover { background:#333; }
+button.danger { background:#d32f2f; }
+button.danger:hover { background:#a12a24; }
+.hidden { display:none; }
+#lists {
+  display:grid;
+  grid-template-columns: repeat(auto-fill,minmax(140px,1fr));
+  gap:16px;
+  margin-top:12px;
+}
+.list-card {
+  background: linear-gradient(135deg, #f4f0ff, #d9d4ff);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
+}
+.list-card:hover {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  background: linear-gradient(135deg, #e1dbff, #c3b3ff);
+}
+ul#wishlist {
+  list-style:none;
+  padding:0;
+  display:grid;
+  grid-template-columns: repeat(auto-fill,minmax(140px,1fr));
+  gap:16px;
+  margin-top:12px;
+}
+li {
+  background:#f8f7ff;
+  border-radius:16px;
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  box-shadow:0 4px 12px rgba(0,0,0,0.1);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+li:hover { transform:translateY(-2px); box-shadow:0 6px 18px rgba(0,0,0,0.15); }
+li img {
+  max-width:100%;
+  border-radius:12px;
+  margin-bottom:8px;
+  object-fit:cover;
+}
+strong {
+  font-size:16px;
+  margin-bottom:4px;
+}
+.meta {
+  font-size:13px;
+  color:#555;
+  margin-top:2px;
+  word-break: break-word;
+}
+.actions {
+  margin-top:6px;
+  display:flex;
+  justify-content:flex-end;
+  gap:6px;
+}
+.actions button {
+  flex:1;
+  font-size:14px;
+  padding:6px;
+}
+@media (max-width: 400px) {
+  ul#wishlist, #lists { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+<h1>🎁 Ønskeliste</h1>
+<div id="app">
+
+<div id="overview">
+  <button onclick="createNew()">➕ Ny ønskeliste</button>
+  <div id="lists"></div>
+</div>
+
+<div id="listView" class="hidden">
+  <button class="secondary" onclick="goBack()">⬅ Tilbake</button>
+  <h3 id="title"></h3>
+
+  <button id="shareBtn" class="secondary hidden" onclick="shareView()">🔗 Del (kun visning)</button>
+  <button id="unlockBtn" class="secondary hidden" onclick="unlockEdit()">🔓 Lås opp redigering</button>
+
+  <ul id="wishlist"></ul>
+
+  <button id="addBtn" class="secondary hidden" onclick="addItem()">➕ Legg til ønske</button>
+  <button id="saveBtn" class="secondary hidden" onclick="saveList()">💾 Lagre ønskeliste</button>
+  <button id="deleteBtn" class="danger hidden" onclick="deleteList()">🗑️ Slett liste</button>
+</div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCP_qTBQhZqUeOVGcMn9wCFL48aH1JzS-Q",
+  authDomain: "family-wishlist-8135c.firebaseapp.com",
+  projectId: "family-wishlist-8135c",
+  storageBucket: "family-wishlist-8135c.firebasestorage.app",
+  messagingSenderId: "6788059602",
+  appId: "1:6788059602:web:eb6c00c61dd1b326edb80b"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let currentList = { id:null, title:"", items:[], pin:"" };
+
+const params = new URLSearchParams(location.search);
+const listId = params.get("list");
+const viewOnly = params.get("view") === "1";
+
+if(listId) openList(listId);
+else loadOverview();
+
+async function loadOverview() {
+  const c = document.getElementById("lists");
+  c.innerHTML="";
+
+  try {
+    const q = query(collection(db,"lists"), orderBy("title","asc"));
+    const snap = await getDocs(q);
+
+    const myHeader = document.createElement("h3");
+    myHeader.textContent = "Din ønskeliste";
+    c.appendChild(myHeader);
+
+    const myListId = localStorage.getItem("myListId");
+    let myList = null;
+    let otherLists = [];
+
+    snap.forEach(d => {
+      if(d.id === myListId) myList = {id:d.id, ...d.data()};
+      else otherLists.push({id:d.id, ...d.data()});
+    });
+
+    if(myList){
+      const div = document.createElement("div");
+      div.className="list-card";
+      div.textContent = myList.title + ` 📝 ${myList.items ? myList.items.length : 0} ønsker`;
+      div.onclick = () => openList(myList.id);
+      c.appendChild(div);
+    } else {
+      const msg = document.createElement("div");
+      msg.textContent = "Du har ikke laget noen liste ennå. Trykk 'Ny ønskeliste' for å lage en.";
+      msg.style.color = "#555";
+      msg.style.marginTop = "6px";
+      msg.style.fontSize = "14px";
+      c.appendChild(msg);
+    }
+
+    if(otherLists.length > 0){
+      const otherHeader = document.createElement("h3");
+      otherHeader.textContent = "Andre ønskelister du kanskje vil se på:";
+      otherHeader.style.marginTop = "24px";
+      otherHeader.style.color = "#333";
+      otherHeader.style.fontSize = "16px";
+      c.appendChild(otherHeader);
+
+      otherLists.forEach(d => {
+        const div=document.createElement("div");
+        div.className="list-card";
+        div.textContent = d.title + ` 📝 ${d.items ? d.items.length : 0} ønsker`;
+        div.onclick = () => openList(d.id);
+        c.appendChild(div);
+      });
+    }
+
+  } catch(e){
+    console.error("Feil ved henting av lister:", e);
+    c.innerHTML="<div style='color:red;text-align:center;'>Kunne ikke hente lister. Sjekk Firestore-indeks og datatyper.</div>";
+  }
+}
+
+function createNew(){ 
+  currentList={id:null,title:"",items:[],pin:""}; 
+  document.getElementById("overview").classList.add("hidden"); 
+  document.getElementById("listView").classList.remove("hidden"); 
+  updateUI(); 
+}
+
+async function openList(id){ 
+  try { 
+    const snap = await getDoc(doc(db,"lists",id)); 
+    if(!snap.exists()){ alert("Listen finnes ikke."); goBack(); return; } 
+
+    currentList={id,...snap.data()}; 
+
+    // Sjekk om listen er din egen via localStorage
+    const myListId = localStorage.getItem("myListId");
+    const isOwner = (myListId === currentList.id);
+
+    if(isOwner) sessionStorage.setItem("pin-ok","true"); // automatisk redigering
+    else sessionStorage.removeItem("pin-ok"); // ingen tilgang før PIN
+
+    document.getElementById("overview").classList.add("hidden"); 
+    document.getElementById("listView").classList.remove("hidden"); 
+    updateUI();
+  } catch(e){ 
+    console.error("Feil ved åpning av liste:", e); 
+    alert("Kunne ikke åpne listen. Sjekk datatyper og indeks."); 
+  } 
+}
+
+function goBack(){ 
+  document.getElementById("listView").classList.add("hidden"); 
+  document.getElementById("overview").classList.remove("hidden"); 
+  loadOverview(); 
+}
+
+function shareView(){ 
+  const url=location.origin+location.pathname+"?list="+currentList.id+"&view=1"; 
+  navigator.clipboard.writeText(url); 
+  alert("Delingslenke kopiert"); 
+}
+
+function unlockEdit(){ 
+  const pin=prompt("PIN-kode:"); 
+  if(pin===currentList.pin){ 
+    sessionStorage.setItem("pin-ok","true"); 
+    updateUI(); 
+  } else alert("Feil PIN"); 
+}
+
+async function addItem(){ 
+  const name=prompt("Navn på ønske:"); 
+  if(!name) return; 
+  const image=prompt("URL til bilde (valgfritt)",""); 
+  const link=prompt("Lenke (valgfritt)",""); 
+  const price=prompt("Pris (valgfritt)",""); 
+  currentList.items.push({name,image,link,price}); 
+  await autoSave(); 
+  updateUI(); 
+}
+
+async function editItem(i){ 
+  const item=currentList.items[i]; 
+  const name=prompt("Navn på ønske:",item.name); 
+  if(!name) return; 
+  const image=prompt("URL til bilde:",item.image||""); 
+  const link=prompt("Lenke:",item.link||""); 
+  const price=prompt("Pris:",item.price||""); 
+  currentList.items[i]={name,image,link,price}; 
+  await autoSave(); 
+  updateUI(); 
+}
+
+async function deleteItem(i){ 
+  currentList.items.splice(i,1); 
+  await autoSave(); 
+  updateUI(); 
+}
+
+async function saveList(){ 
+  if(!currentList.title){ const title=prompt("Tittel:"); if(!title) return; currentList.title=title; } 
+  if(!currentList.pin){ const pin=prompt("PIN-kode:"); if(!pin) return; currentList.pin=pin; } 
+  if(!currentList.id){ 
+    const ref=doc(collection(db,"lists")); 
+    currentList.id=ref.id; 
+    await setDoc(ref,currentList); 
+  } else await updateDoc(doc(db,"lists",currentList.id),currentList); 
+
+  sessionStorage.setItem("pin-ok","true"); 
+  localStorage.setItem("myListId", currentList.id); 
+  updateUI(); 
+  alert("Listen er lagret!"); 
+}
+
+async function deleteList(){ 
+  if(confirm("Slette listen permanent?")){ 
+    await deleteDoc(doc(db,"lists",currentList.id)); 
+    localStorage.removeItem("myListId"); 
+    goBack(); 
+  } 
+}
+
+async function autoSave(){ 
+  if(!currentList.id) return; 
+  await updateDoc(doc(db,"lists",currentList.id),{items:currentList.items}); 
+}
+
+function updateUI(){
+  const unlocked=(sessionStorage.getItem("pin-ok")==="true") && !viewOnly;
+
+  document.getElementById("title").textContent=currentList.title||"Ny ønskeliste";
+  document.getElementById("shareBtn").classList.toggle("hidden",!currentList.id);
+  document.getElementById("unlockBtn").classList.toggle("hidden",currentList.id && !unlocked ? false : true);
+  document.getElementById("addBtn").classList.toggle("hidden",!unlocked);
+  document.getElementById("deleteBtn").classList.toggle("hidden",!unlocked);
+  document.getElementById("saveBtn").classList.toggle("hidden",currentList.items.length===0 || !unlocked);
+
+  const ul=document.getElementById("wishlist");
+  ul.innerHTML="";
+  currentList.items.forEach((it,i)=>{
+    const li=document.createElement("li");
+    if(it.image) li.innerHTML=`<img src="${it.image}" alt="${it.name}"/>`;
+    li.innerHTML+=`<strong>${it.name}</strong>`;
+    if(it.price) li.innerHTML+=`<div class="meta">💰 ${it.price}</div>`;
+    if(it.link) li.innerHTML+=`<div class="meta">🔗 <a href="${it.link}" target="_blank">${it.link}</a></div>`;
+    if(unlocked){
+      const actions=document.createElement("div");
+      actions.className="actions";
+      const editBtn=document.createElement("button"); editBtn.textContent="✏️"; editBtn.onclick=()=>editItem(i);
+      const delBtn=document.createElement("button"); delBtn.textContent="🗑️"; delBtn.onclick=()=>deleteItem(i);
+      actions.appendChild(editBtn); actions.appendChild(delBtn);
+      li.appendChild(actions);
+    }
+    ul.appendChild(li);
+  });
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  window.createNew=createNew;
+  window.goBack=goBack;
+  window.unlockEdit=unlockEdit;
+  window.addItem=addItem;
+  window.editItem=editItem;
+  window.deleteItem=deleteItem;
+  window.saveList=saveList;
+  window.deleteList=deleteList;
+  window.shareView=shareView;
+});
+</script>
+</body>
+</html>
